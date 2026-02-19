@@ -5,7 +5,7 @@ Represents a single block in the blockchain.
 """
 
 import time
-from typing import List, Optional
+from typing import List
 from chainforgeledger.crypto.hashing import sha256_hash
 
 

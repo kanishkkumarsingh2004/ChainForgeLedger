@@ -5,7 +5,6 @@ Transaction management and validation.
 """
 
 import time
-from typing import List, Optional
 from chainforgeledger.crypto.hashing import sha256_hash
 
 class Transaction:

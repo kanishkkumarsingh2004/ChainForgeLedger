@@ -5,7 +5,7 @@ HTTP server implementation for blockchain API.
 """
 
 import threading
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 from chainforgeledger.utils.logger import get_logger
 
 

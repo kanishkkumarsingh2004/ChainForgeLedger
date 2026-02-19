@@ -10,5 +10,19 @@ Implementations of various blockchain consensus mechanisms including:
 from chainforgeledger.consensus.pow import ProofOfWork
 from chainforgeledger.consensus.pos import ProofOfStake
 from chainforgeledger.consensus.validator import Validator
+from chainforgeledger.consensus.interface import (
+    ConsensusInterface,
+    ProofOfWorkInterface,
+    ProofOfStakeInterface,
+    DelegatedProofOfStakeInterface,
+    PBFTInterface,
+    ConsensusFactory,
+    ConsensusManager
+)
 
-__all__ = ["ProofOfWork", "ProofOfStake", "Validator"]
+__all__ = [
+    "ProofOfWork", "ProofOfStake", "Validator",
+    "ConsensusInterface", "ProofOfWorkInterface", "ProofOfStakeInterface",
+    "DelegatedProofOfStakeInterface", "PBFTInterface",
+    "ConsensusFactory", "ConsensusManager"
+]

@@ -8,7 +8,7 @@ This module provides the command-line interface for the ChainForgeLedger blockch
 import sys
 import argparse
 import random
-from chainforgeledger import Blockchain, Block, Transaction, ProofOfWork, ProofOfStake, Tokenomics, Wallet, ValidatorManager, Validator
+from chainforgeledger import Blockchain, Transaction, ProofOfWork, ProofOfStake, Tokenomics, Wallet, ValidatorManager, Validator
 
 
 def main():

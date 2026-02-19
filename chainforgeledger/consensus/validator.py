@@ -4,7 +4,7 @@ ChainForgeLedger Validator Module
 Validator management for PoS consensus.
 """
 
-from typing import Optional, Dict, List
+from typing import Optional, List
 import random
 
 

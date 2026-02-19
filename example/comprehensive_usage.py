@@ -2,7 +2,8 @@
 Comprehensive Example: Complete ChainForgeLedger Blockchain Platform Usage
 
 This example demonstrates how all the different components of the ChainForgeLedger
-blockchain platform work together to create a complete blockchain ecosystem.
+blockchain platform work together to create a complete blockchain ecosystem,
+including the new financial ecosystem with users, wallets, and banks.
 
 Components demonstrated:
 1. Core Blockchain Layer (PoW/PoS consensus)
@@ -13,13 +14,14 @@ Components demonstrated:
 6. Governance System (Proposals and Voting)
 7. Validator Management
 8. Cryptographic Operations
+9. Financial Ecosystem (Banks, Users, Financial Services)
+10. Tokenomics and Economic System
 """
 
 import time
 import random
 from chainforgeledger import (
     Blockchain,
-    Block,
     Transaction,
     ProofOfWork,
     ProofOfStake,
@@ -28,17 +30,13 @@ from chainforgeledger import (
     Compiler,
     ContractExecutor,
     Node,
-    Peer,
-    Protocol,
-    MemPool,
-    Proposal,
     VotingSystem,
     ValidatorManager,
     Validator,
-    sha256_hash,
-    generate_keys,
-    KeyPair
+    DAO,
+    Tokenomics
 )
+from example.ecosystem import create_financial_ecosystem, demonstrate_ecosystem_operations
 
 
 def create_blockchain_platform():
@@ -97,6 +95,26 @@ def create_blockchain_platform():
         'validator1': Wallet()
     }
     
+    # 7. Initialize tokenomics
+    print("\n7. Initializing Tokenomics System...")
+    tokenomics = Tokenomics(total_supply=1000000000)
+    
+    # 8. Initialize DAO
+    print("\n8. Setting Up Decentralized Governance (DAO)...")
+    dao = DAO(
+        name="ChainForge Platform DAO",
+        description="Decentralized autonomous organization for platform governance",
+        creator_address=wallets['user1'].address,
+        total_token_supply=tokenomics.total_supply,
+        quorum_threshold=0.5,
+        approval_threshold=0.66,
+        voting_period=86400
+    )
+    
+    # Add initial members to DAO
+    for name, wallet in wallets.items():
+        dao.add_member(wallet.address, random.randint(100, 1000))
+    
     return {
         'pow_blockchain': pow_blockchain,
         'pow_consensus': pow_consensus,
@@ -108,7 +126,9 @@ def create_blockchain_platform():
         'compiler': compiler,
         'contract_executor': contract_executor,
         'voting_system': voting_system,
-        'wallets': wallets
+        'wallets': wallets,
+        'tokenomics': tokenomics,
+        'dao': dao
     }
 
 
@@ -123,10 +143,11 @@ def demonstrate_blockchain_operations(platform):
     
     # Add transactions
     transactions = []
-    for i in range(3):
+    wallet_names = list(platform['wallets'].keys())
+    for i in range(2):
         tx = Transaction(
-            sender=platform['wallets'][f'user{i+1}'].address,
-            receiver=platform['wallets'][f'user{3 - i}'].address,
+            sender=platform['wallets'][wallet_names[i]].address,
+            receiver=platform['wallets'][wallet_names[i+1]].address,
             amount=random.uniform(1, 100)
         )
         transactions.append(tx.to_dict())
@@ -169,7 +190,7 @@ def demonstrate_wallet_operations(platform):
     signature = sender_wallet.sign_transaction(transaction_data)
     
     print(f"✓ Transaction created and signed")
-    print(f"   Signature: {signature.signature[:16]}...")
+    print(f"   Signature: {signature.value[:16]}...")
     
     # Verify transaction
     is_valid = receiver_wallet.verify_transaction(transaction_data, signature)
@@ -217,38 +238,44 @@ def demonstrate_governance_operations(platform):
     """Demonstrate governance operations."""
     print("\n=== Governance Operations ===")
     
-    voting_system = platform['voting_system']
+    dao = platform['dao']
+    
+    print(f"1. DAO Information:")
+    print(f"   Name: {dao.name}")
+    print(f"   Members: {len(dao.members)}")
+    print(f"   Token Supply: {dao.total_token_supply:,}")
+    print(f"   Quorum: {dao.quorum_threshold:.0%}")
+    print(f"   Approval Threshold: {dao.approval_threshold:.0%}")
     
     # Create proposal
-    proposal = Proposal(
+    proposal = dao.create_proposal(
         title="Protocol Upgrade v2.0",
-        description="Implement sharding and layer2 solutions",
+        description="Implement sharding and layer2 solutions for scalability",
         proposer_address=platform['wallets']['user1'].address,
         proposal_type="upgrade"
     )
     
-    print(f"✓ Proposal created: {proposal.title}")
+    print(f"\n2. Proposal Created: {proposal.title}")
     print(f"   ID: {proposal.proposal_id}")
     
     # Activate proposal for voting
-    proposal.activate(voting_duration=3600)
-    print(f"✓ Proposal activated - Voting period: 1 hour")
+    dao.activate_proposal(proposal.proposal_id)
+    print(f"✓ Proposal activated - Voting period: {dao.voting_period / 3600:.0f} hours")
     
     # Cast votes
     print("\n3. Voting:")
-    validators = platform['validator_manager'].get_active_validators()
+    members = list(dao.members.keys())
     
-    for i, validator in enumerate(validators):
+    for i, member_address in enumerate(members[:4]):
         vote = random.choice(['yes', 'no', 'abstain'])
-        voting_power = validator.stake
-        proposal.add_vote(validator.address, vote, voting_power)
-        print(f"   Validator {i+1} ({validator.address}): {vote} (Power: {voting_power:.0f})")
+        dao.cast_vote(proposal.proposal_id, member_address, vote)
+        print(f"   Member {i+1} ({member_address[:8]}...): {vote}")
     
     # Check voting status
-    vote_count = proposal.get_vote_count()
+    vote_count = dao.voting_system.get_vote_summary(proposal.proposal_id)
     print(f"\n4. Vote Results:")
-    print(f"   Yes: {vote_count['yes']:.0f} | No: {vote_count['no']:.0f} | Abstain: {vote_count['abstain']:.0f}")
-    print(f"   Total: {vote_count['total']:.0f}")
+    print(f"   Yes: {vote_count['votes'].get('yes', 0):.0f} | No: {vote_count['votes'].get('no', 0):.0f} | Abstain: {vote_count['votes'].get('abstain', 0):.0f}")
+    print(f"   Total: {vote_count['votes'].get('total', 0):.0f}")
 
 
 def demonstrate_validator_operations(platform):
@@ -304,6 +331,39 @@ def demonstrate_smart_contracts(platform):
     print("✓ Contract execution simulation successful")
 
 
+def demonstrate_tokenomics(platform):
+    """Demonstrate tokenomics operations."""
+    print("\n=== Tokenomics Operations ===")
+    
+    tokenomics = platform['tokenomics']
+    
+    print("1. Token Supply Distribution:")
+    supply_info = tokenomics.get_supply_distribution()
+    print(f"   Total Supply: {supply_info['total']:,}")
+    print(f"   Circulating Supply: {supply_info['circulating']:,}")
+    print(f"   Staking Rewards Pool: {supply_info['staking_rewards']:,}")
+    print(f"   Treasury: {supply_info['treasury']:,}")
+    
+    print("\n2. Economic Metrics:")
+    print(f"   Inflation Rate: {tokenomics.inflation_rate:.1%}")
+    print(f"   Next Year Inflation: {tokenomics.calculate_inflation(1):,}")
+    
+    # Demonstrate minting and burning
+    mint_amount = 100000
+    print(f"\n3. Token Minting:")
+    tokenomics.mint_tokens(mint_amount, purpose='staking_rewards')
+    print(f"✓ Minted {mint_amount:,} tokens for staking rewards")
+    
+    burn_amount = 50000
+    print(f"\n4. Token Burning:")
+    tokenomics.burn_tokens(burn_amount)
+    print(f"✓ Burned {burn_amount:,} tokens")
+    
+    print(f"\n5. Updated Supply:")
+    updated_supply = tokenomics.get_supply_distribution()
+    print(f"   Current Supply: {updated_supply['current']:,}")
+
+
 def main():
     """Main function to run the comprehensive example."""
     print("=" * 60)
@@ -320,6 +380,15 @@ def main():
     demonstrate_governance_operations(platform)
     demonstrate_validator_operations(platform)
     demonstrate_smart_contracts(platform)
+    demonstrate_tokenomics(platform)
+    
+    # Run financial ecosystem example
+    print("\n" + "=" * 60)
+    print("CREATING FINANCIAL ECOSYSTEM")
+    print("=" * 60)
+    
+    financial_ecosystem = create_financial_ecosystem()
+    demonstrate_ecosystem_operations(financial_ecosystem)
     
     print("\n" + "=" * 60)
     print("PLATFORM CREATION AND OPERATIONS COMPLETED")
@@ -329,6 +398,9 @@ def main():
     print("✅ PoW and PoS consensus mechanisms operational")
     print("✅ Network communication and transaction processing active")
     print("✅ Governance and validator management systems working")
+    print("✅ Financial ecosystem with banks and users operational")
+    print("✅ Comprehensive financial services available")
+    print("✅ Tokenomics and economic system functioning")
 
 
 if __name__ == "__main__":

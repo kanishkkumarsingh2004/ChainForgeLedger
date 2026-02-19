@@ -4,6 +4,7 @@ ChainForgeLedger Hashing Module
 SHA-256 hashing implementation.
 """
 import random
+from typing import Union
 
 p = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
 a = 0
@@ -19,7 +20,25 @@ n = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
 def right_rotate(x, n):
     return ((x >> n) | (x << (32 - n))) & 0xFFFFFFFF
 
-def sha256_hash(message: str) -> str:
+def sha256_hash(message: Union[str, bytes]) -> str:
+    """
+    Calculate SHA-256 hash of the given message.
+    
+    Args:
+        message: Input message as string or bytes
+        
+    Returns:
+        SHA-256 hash as hexadecimal string
+    """
+    # Handle bytes input
+    if isinstance(message, bytes):
+        message_bytes = bytearray(message)
+    elif isinstance(message, str):
+        message_bytes = bytearray(message, 'utf-8')
+    elif isinstance(message, bytearray):
+        message_bytes = message
+    else:
+        raise TypeError("Message must be str, bytes, or bytearray")
     
     # Initial hash values (first 32 bits of the fractional parts of the square roots of the first 8 primes)
     h = [
@@ -102,6 +121,123 @@ def sha256_hash(message: str) -> str:
         ]
 
     return ''.join(f'{value:08x}' for value in h)
+
+
+def sha256_hash_bytes(message: Union[str, bytes]) -> bytes:
+    """
+    Calculate SHA-256 hash of the given message and return as bytes.
+    
+    Args:
+        message: Input message as string or bytes
+        
+    Returns:
+        SHA-256 hash as bytes
+    """
+    hex_hash = sha256_hash(message)
+    return bytes.fromhex(hex_hash)
+
+
+# Rotation offsets
+ROTATION_OFFSETS = [
+    [0, 36, 3, 41, 18],
+    [1, 44, 10, 45, 2],
+    [62, 6, 43, 15, 61],
+    [28, 55, 25, 21, 56],
+    [27, 20, 39, 8, 14],
+]
+
+# Round constants
+ROUND_CONSTANTS = [
+    0x0000000000000001, 0x0000000000008082,
+    0x800000000000808A, 0x8000000080008000,
+    0x000000000000808B, 0x0000000080000001,
+    0x8000000080008081, 0x8000000000008009,
+    0x000000000000008A, 0x0000000000000088,
+    0x0000000080008009, 0x000000008000000A,
+    0x000000008000808B, 0x800000000000008B,
+    0x8000000000008089, 0x8000000000008003,
+    0x8000000000008002, 0x8000000000000080,
+    0x000000000000800A, 0x800000008000000A,
+    0x8000000080008081, 0x8000000000008080,
+    0x0000000080000001, 0x8000000080008008,
+]
+
+def rotl(x, n):
+    return ((x << n) | (x >> (64 - n))) & 0xFFFFFFFFFFFFFFFF
+
+def keccak_f(state):
+    for rc in ROUND_CONSTANTS:
+        # Theta
+        C = [state[x] ^ state[x+5] ^ state[x+10] ^ state[x+15] ^ state[x+20] for x in range(5)]
+        D = [C[(x-1)%5] ^ rotl(C[(x+1)%5], 1) for x in range(5)]
+        for x in range(5):
+            for y in range(5):
+                state[x + 5*y] ^= D[x]
+
+        # Rho + Pi
+        new_state = [0]*25
+        for x in range(5):
+            for y in range(5):
+                new_state[y + 5*((2*x+3*y)%5)] = rotl(
+                    state[x + 5*y],
+                    ROTATION_OFFSETS[x][y]
+                )
+        state = new_state
+
+        # Chi
+        for y in range(5):
+            row = state[5*y:5*y+5]
+            for x in range(5):
+                state[5*y+x] ^= (~row[(x+1)%5]) & row[(x+2)%5]
+
+        # Iota
+        state[0] ^= rc
+
+    return state
+
+def keccak256_hash(message: str) -> str:
+    """
+    Calculate Keccak-256 hash of the given message.
+    
+    Args:
+        message: Input message string
+        
+    Returns:
+        Keccak-256 hash as hexadecimal string
+    """
+    if isinstance(message, str):
+        message = message.encode('utf-8')
+        
+    rate = 1088 // 8  # 136 bytes
+    state = [0] * 25
+
+    # Padding (Keccak padding: 0x01 ... 0x80)
+    padded = bytearray(message)
+    padded.append(0x01)
+    while len(padded) % rate != rate - 1:
+        padded.append(0x00)
+    padded.append(0x80)
+
+    # Absorb phase
+    for i in range(0, len(padded), rate):
+        block = padded[i:i+rate]
+        for j in range(len(block)):
+            state[j//8] ^= block[j] << (8*(j%8))
+        state = keccak_f(state)
+
+    # Squeeze phase
+    output = bytearray()
+    while len(output) < 32:
+        for i in range(rate):
+            output.append((state[i//8] >> (8*(i%8))) & 0xFF)
+        if len(output) >= 32:
+            break
+        state = keccak_f(state)
+
+    return output[:32].hex()[:64]
+
+
+
 
 
 # ==========================================

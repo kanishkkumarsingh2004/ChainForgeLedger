@@ -1,0 +1,8 @@
+-e git+ssh://git@github.com/kanishkkumarsingh2004/BCT-IMP-ALG.git@a2ce2046c8bc623d012688b2aced8b3ee3d065ea#egg=ChainForgeLedger
+iniconfig==2.3.0
+msgpack==1.1.2
+packaging==26.0
+pluggy==1.6.0
+Pygments==2.19.2
+pytest==9.0.2
+PyYAML==6.0.3

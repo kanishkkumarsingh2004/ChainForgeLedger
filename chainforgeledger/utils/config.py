@@ -358,7 +358,6 @@ class Config:
     
     def config_changed(self):
         """Callback when configuration changes."""
-        pass
     
     def to_dict(self) -> Dict:
         """Convert to dictionary."""

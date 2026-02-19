@@ -129,3 +129,4 @@ test*.pyc
 *.pyc
 
 imp.txt
+chainforgeledger.db

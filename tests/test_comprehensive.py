@@ -21,6 +21,7 @@ from chainforgeledger import (
     Proposal,
     VotingSystem,
     sha256_hash,
+    keccak256_hash,
     generate_keys,
     KeyPair,
     MerkleTree,
@@ -30,11 +31,46 @@ from chainforgeledger import (
     ApiServer,
     ApiRoutes,
     Database,
-    LevelDBStorage,
     BlockStorage,
     TransactionStorage,
     Tokenomics,
-    Config
+    Config,
+    CrossChainBridge,
+    StakingPool,
+    LiquidityPool,
+    FeeDistributionSystem,
+    ForkHandler,
+    ShardManager,
+    StatePruner,
+    LendingPool,
+    BlockchainCache,
+    DifficultyAdjuster,
+    BlockSerializer,
+    SlashingMechanism,
+    ConsensusInterface,
+    ProofOfWorkInterface,
+    ProofOfStakeInterface,
+    DelegatedProofOfStakeInterface,
+    PBFTInterface,
+    ConsensusFactory,
+    ConsensusManager,
+    MultiSignature,
+    MultiSigWallet,
+    MnemonicGenerator,
+    KK20Token,
+    KK721Token,
+    TokenFactory,
+    NativeCoin,
+    Stablecoin,
+    TreasuryManager,
+    DAO,
+    RateLimiter,
+    ContractSandbox,
+    LevelDBStorage,
+    CryptoUtils,
+    get_logger,
+    configure_global_logger,
+    LoggerMixin
 )
 
 
@@ -370,6 +406,288 @@ class TestChainForgeLedgerComprehensive(unittest.TestCase):
         """Test tokenomics system integration"""
         tokenomics = Tokenomics()
         self.assertIsNotNone(tokenomics)
+    
+    # ==================== New Component Tests ====================
+    
+    def test_cross_chain_bridge(self):
+        """Test cross-chain bridge functionality"""
+        bridge = CrossChainBridge("chain1", "chain2")
+        self.assertIsNotNone(bridge)
+        self.assertEqual(bridge.source_chain, "chain1")
+        self.assertEqual(bridge.destination_chain, "chain2")
+    
+    def test_staking_pool(self):
+        """Test staking pool operations"""
+        dao = DAO(
+            name="Test DAO",
+            description="Test DAO",
+            creator_address="creator1",
+            total_token_supply=1000000,
+            quorum_threshold=0.5,
+            approval_threshold=0.66,
+            voting_period=86400
+        )
+        treasury = TreasuryManager(dao)
+        staking_pool = StakingPool(treasury)
+        self.assertIsNotNone(staking_pool)
+    
+    def test_liquidity_pool(self):
+        """Test liquidity pool operations"""
+        liquidity_pool = LiquidityPool("TOKENA", "TOKENB")
+        self.assertIsNotNone(liquidity_pool)
+        self.assertEqual(liquidity_pool.token_a, "TOKENA")
+        self.assertEqual(liquidity_pool.token_b, "TOKENB")
+    
+    def test_fee_distribution(self):
+        """Test fee distribution system"""
+        dao = DAO(
+            name="Test DAO",
+            description="Test DAO",
+            creator_address="creator1",
+            total_token_supply=1000000,
+            quorum_threshold=0.5,
+            approval_threshold=0.66,
+            voting_period=86400
+        )
+        treasury = TreasuryManager(dao)
+        fee_distribution = FeeDistributionSystem(treasury)
+        self.assertIsNotNone(fee_distribution)
+    
+    def test_fork_handler(self):
+        """Test fork handler operations"""
+        blockchain = Blockchain(difficulty=2)
+        fork_handler = ForkHandler(blockchain)
+        self.assertIsNotNone(fork_handler)
+    
+    def test_shard_manager(self):
+        """Test shard manager operations"""
+        shard_manager = ShardManager()
+        self.assertIsNotNone(shard_manager)
+    
+    def test_state_pruner(self):
+        """Test state pruner operations"""
+        dao = DAO(
+            name="Test DAO",
+            description="Test DAO",
+            creator_address="creator1",
+            total_token_supply=1000000,
+            quorum_threshold=0.5,
+            approval_threshold=0.66,
+            voting_period=86400
+        )
+        treasury = TreasuryManager(dao)
+        state_pruner = StatePruner("/tmp/test_storage", treasury)
+        self.assertIsNotNone(state_pruner)
+    
+    def test_lending_pool(self):
+        """Test lending pool operations"""
+        lending_pool = LendingPool("TOKEN")
+        self.assertIsNotNone(lending_pool)
+        self.assertEqual(lending_pool.token, "TOKEN")
+    
+    def test_blockchain_cache(self):
+        """Test blockchain cache operations"""
+        blockchain_cache = BlockchainCache()
+        self.assertIsNotNone(blockchain_cache)
+    
+    def test_difficulty_adjuster(self):
+        """Test difficulty adjuster operations"""
+        difficulty_adjuster = DifficultyAdjuster()
+        self.assertIsNotNone(difficulty_adjuster)
+    
+    def test_block_serializer(self):
+        """Test block serializer operations"""
+        serializer = BlockSerializer()
+        self.assertIsNotNone(serializer)
+    
+    def test_slashing_mechanism(self):
+        """Test slashing mechanism operations"""
+        slashing = SlashingMechanism()
+        self.assertIsNotNone(slashing)
+    
+    def test_pow_interface(self):
+        """Test Proof of Work consensus interface"""
+        pow_interface = ProofOfWorkInterface(difficulty=2)
+        self.assertIsNotNone(pow_interface)
+        self.assertEqual(pow_interface.difficulty, 2)
+    
+    def test_pos_interface(self):
+        """Test Proof of Stake consensus interface"""
+        validator_manager = ValidatorManager()
+        validator = Validator("validator1", stake=1000)
+        validator_manager.add_validator(validator)
+        pos_interface = ProofOfStakeInterface(validator_manager)
+        self.assertIsNotNone(pos_interface)
+    
+    def test_consensus_factory(self):
+        """Test consensus factory operations"""
+        factory = ConsensusFactory()
+        self.assertIsNotNone(factory)
+    
+    def test_consensus_manager(self):
+        """Test consensus manager operations"""
+        manager = ConsensusManager()
+        self.assertIsNotNone(manager)
+    
+    def test_keccak256_hashing(self):
+        """Test Keccak-256 hashing functionality"""
+        test_data = "test data"
+        hash_result = keccak256_hash(test_data)
+        self.assertIsNotNone(hash_result)
+        self.assertEqual(len(hash_result), 64)
+        self.assertIsInstance(hash_result, str)
+        
+        # Test hash consistency
+        self.assertEqual(keccak256_hash(test_data), hash_result)
+    
+    def test_multi_signature(self):
+        """Test multi-signature operations"""
+        multi_sig = MultiSignature(2, ["key1", "key2", "key3"])
+        self.assertIsNotNone(multi_sig)
+        self.assertEqual(multi_sig.required_signatures, 2)
+        self.assertEqual(len(multi_sig.public_keys), 3)
+    
+    def test_multi_sig_wallet(self):
+        """Test multi-signature wallet operations"""
+        multi_sig_wallet = MultiSigWallet(2, ["key1", "key2", "key3"])
+        self.assertIsNotNone(multi_sig_wallet)
+    
+    def test_mnemonic_generator(self):
+        """Test mnemonic generator operations"""
+        mnemonic_generator = MnemonicGenerator()
+        self.assertIsNotNone(mnemonic_generator)
+    
+    def test_kk20_token(self):
+        """Test KK20 token operations"""
+        token = KK20Token("Test Token", "TTK", 18, 1000000)
+        self.assertIsNotNone(token)
+        self.assertEqual(token.name, "Test Token")
+        self.assertEqual(token.symbol, "TTK")
+        self.assertEqual(token.decimals, 18)
+        self.assertEqual(token.total_supply, 1000000)
+    
+    def test_kk721_token(self):
+        """Test KK721 token operations"""
+        token = KK721Token("Test NFT", "TNFT")
+        self.assertIsNotNone(token)
+        self.assertEqual(token.name, "Test NFT")
+        self.assertEqual(token.symbol, "TNFT")
+    
+    def test_token_factory(self):
+        """Test token factory operations"""
+        factory = TokenFactory()
+        self.assertIsNotNone(factory)
+    
+    def test_native_coin(self):
+        """Test native coin operations"""
+        native_coin = NativeCoin()
+        self.assertIsNotNone(native_coin)
+    
+    def test_stablecoin(self):
+        """Test stablecoin operations"""
+        stablecoin = Stablecoin("USD Stablecoin", "USDS", 1.0)
+        self.assertIsNotNone(stablecoin)
+        self.assertEqual(stablecoin.name, "USD Stablecoin")
+        self.assertEqual(stablecoin.symbol, "USDS")
+    
+    def test_treasury_manager(self):
+        """Test treasury manager operations"""
+        dao = DAO(
+            name="Test DAO",
+            description="Test DAO",
+            creator_address="creator1",
+            total_token_supply=1000000,
+            quorum_threshold=0.5,
+            approval_threshold=0.66,
+            voting_period=86400
+        )
+        treasury = TreasuryManager(dao)
+        self.assertIsNotNone(treasury)
+    
+    def test_dao_operations(self):
+        """Test DAO operations"""
+        dao = DAO(
+            name="Test DAO",
+            description="This is a test DAO",
+            creator_address="creator1",
+            total_token_supply=1000000,
+            quorum_threshold=0.5,
+            approval_threshold=0.66,
+            voting_period=86400
+        )
+        self.assertIsNotNone(dao)
+        self.assertEqual(dao.name, "Test DAO")
+    
+    def test_rate_limiter(self):
+        """Test rate limiter operations"""
+        rate_limiter = RateLimiter()
+        self.assertIsNotNone(rate_limiter)
+    
+    def test_contract_sandbox(self):
+        """Test contract sandbox operations"""
+        sandbox = ContractSandbox()
+        self.assertIsNotNone(sandbox)
+    
+    def test_leveldb_storage(self):
+        """Test LevelDB storage operations"""
+        import tempfile
+        import os
+        with tempfile.TemporaryDirectory() as temp_dir:
+            leveldb = LevelDBStorage(temp_dir)
+            self.assertIsNotNone(leveldb)
+    
+    def test_crypto_utils(self):
+        """Test crypto utilities operations"""
+        self.assertIsNotNone(CryptoUtils)
+    
+    def test_logger_operations(self):
+        """Test logger operations"""
+        logger = get_logger("test_logger")
+        self.assertIsNotNone(logger)
+        
+        configure_global_logger()
+    
+    # ==================== Enhanced Integration Tests ====================
+    
+    def test_comprehensive_platform_integration(self):
+        """Test comprehensive platform integration with all components"""
+        # Create blockchain and consensus
+        blockchain = Blockchain(difficulty=2)
+        validator_manager = ValidatorManager()
+        validator = Validator("address1", stake=1000)
+        validator_manager.add_validator(validator)
+        pos_consensus = ProofOfStake(blockchain, validator_manager, reward=50.0)
+        
+        # Create wallets
+        wallet1 = Wallet()
+        wallet2 = Wallet()
+        
+        # Create network components
+        node1 = Node("node1")
+        node2 = Node("node2")
+        node1.connect(node2)
+        
+        # Create tokenomics and DAO
+        tokenomics = Tokenomics(total_supply=1000000000)
+        dao = DAO(
+            name="Test Platform DAO",
+            description="Platform governance DAO",
+            creator_address=wallet1.address,
+            total_token_supply=tokenomics.total_supply,
+            quorum_threshold=0.5,
+            approval_threshold=0.66,
+            voting_period=86400
+        )
+        
+        # Verify all components are operational
+        self.assertIsNotNone(blockchain)
+        self.assertIsNotNone(pos_consensus)
+        self.assertIsNotNone(wallet1)
+        self.assertIsNotNone(wallet2)
+        self.assertIsNotNone(node1)
+        self.assertIsNotNone(node2)
+        self.assertIsNotNone(tokenomics)
+        self.assertIsNotNone(dao)
 
 
 if __name__ == '__main__':

@@ -6,7 +6,7 @@ Decentralized Autonomous Organization (DAO) implementation for blockchain govern
 
 import time
 import json
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 from chainforgeledger.utils.logger import get_logger
 from chainforgeledger.governance.proposal import Proposal
 from chainforgeledger.governance.voting import VotingSystem

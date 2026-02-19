@@ -7,7 +7,6 @@ blockchain platform with both Proof of Work and Proof of Stake consensus mechani
 
 from chainforgeledger import (
     Blockchain,
-    Block,
     Transaction,
     ProofOfWork,
     ProofOfStake,
