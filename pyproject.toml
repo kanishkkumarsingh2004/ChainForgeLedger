@@ -11,12 +11,13 @@ authors = [
 description = "A complete blockchain platform library with PoW/PoS consensus, smart contracts, and DeFi applications"
 readme = "README.md"
 requires-python = ">=3.8"
+license = "MIT"
+
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Education",
     "Intended Audience :: Financial and Insurance Industry",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
@@ -29,7 +30,6 @@ classifiers = [
 ]
 
 dependencies = [
-    # Data Serialization
     "msgpack>=1.0",
     "pyyaml>=6.0"
 ]
@@ -48,7 +48,8 @@ docs = [
 ]
 
 [project.urls]
-"Repository" = "https://github.com/kanishkkumarsingh2004/ChainForgeLedger.git"
+Homepage = "https://github.com/kanishkkumarsingh2004/ChainForgeLedger"
+Repository = "https://github.com/kanishkkumarsingh2004/ChainForgeLedger"
 
 [project.scripts]
 chainforgeledger = "chainforgeledger.__main__:main"

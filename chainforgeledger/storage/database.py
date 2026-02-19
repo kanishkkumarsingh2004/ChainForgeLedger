@@ -178,6 +178,251 @@ class Database:
                 )
             ''')
             
+             # Staking table
+            self.cursor.execute('''
+                CREATE TABLE IF NOT EXISTS staking (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    validator_address TEXT NOT NULL,
+                    staker_address TEXT NOT NULL,
+                    amount REAL NOT NULL,
+                    timestamp REAL NOT NULL,
+                    type TEXT NOT NULL,
+                    block_height INTEGER,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (block_height) REFERENCES blocks(block_index)
+                )
+            ''')
+            
+            # Rewards table
+            self.cursor.execute('''
+                CREATE TABLE IF NOT EXISTS rewards (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    validator_address TEXT NOT NULL,
+                    recipient_address TEXT NOT NULL,
+                    amount REAL NOT NULL,
+                    type TEXT NOT NULL,
+                    block_height INTEGER,
+                    timestamp REAL NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (block_height) REFERENCES blocks(block_index)
+                )
+            ''')
+            
+            # Unstaking queue table
+            self.cursor.execute('''
+                CREATE TABLE IF NOT EXISTS unstaking_queue (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    validator_address TEXT NOT NULL,
+                    staker_address TEXT NOT NULL,
+                    amount REAL NOT NULL,
+                    request_time REAL NOT NULL,
+                    release_time REAL NOT NULL,
+                    completed INTEGER NOT NULL DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
+            # DAO table
+            self.cursor.execute('''
+                CREATE TABLE IF NOT EXISTS daos (
+                    dao_id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    description TEXT,
+                    creator_address TEXT NOT NULL,
+                    total_token_supply REAL NOT NULL,
+                    quorum_threshold REAL NOT NULL,
+                    approval_threshold REAL NOT NULL,
+                    voting_period REAL NOT NULL,
+                    proposal_fee REAL NOT NULL,
+                    governance_token TEXT NOT NULL,
+                    treasury TEXT,
+                    members TEXT,
+                    config TEXT,
+                    created_at REAL NOT NULL,
+                    updated_at REAL NOT NULL
+                )
+            ''')
+            
+            # Proposals table
+            self.cursor.execute('''
+                CREATE TABLE IF NOT EXISTS proposals (
+                    proposal_id TEXT PRIMARY KEY,
+                    dao_id TEXT NOT NULL,
+                    proposer_address TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    description TEXT,
+                    type TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    quorum_required REAL NOT NULL,
+                    approval_threshold REAL NOT NULL,
+                    voting_duration REAL NOT NULL,
+                    start_time REAL,
+                    end_time REAL,
+                    yes_votes REAL NOT NULL DEFAULT 0,
+                    no_votes REAL NOT NULL DEFAULT 0,
+                    abstain_votes REAL NOT NULL DEFAULT 0,
+                    total_votes REAL NOT NULL DEFAULT 0,
+                    executed INTEGER NOT NULL DEFAULT 0,
+                    created_at REAL NOT NULL,
+                    updated_at REAL NOT NULL,
+                    FOREIGN KEY (dao_id) REFERENCES daos(dao_id)
+                )
+            ''')
+            
+            # Votes table
+            self.cursor.execute('''
+                CREATE TABLE IF NOT EXISTS votes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    proposal_id TEXT NOT NULL,
+                    voter_address TEXT NOT NULL,
+                    vote TEXT NOT NULL,
+                    voting_power REAL NOT NULL,
+                    timestamp REAL NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (proposal_id) REFERENCES proposals(proposal_id)
+                )
+            ''')
+            
+            # Lending pools table
+            self.cursor.execute('''
+                CREATE TABLE IF NOT EXISTS lending_pools (
+                    pool_id TEXT PRIMARY KEY,
+                    token TEXT NOT NULL,
+                    total_deposits REAL NOT NULL DEFAULT 0,
+                    total_borrowed REAL NOT NULL DEFAULT 0,
+                    interest_rate REAL NOT NULL,
+                    collateral_ratio REAL NOT NULL,
+                    liquidation_threshold REAL NOT NULL,
+                    liquidation_bonus REAL NOT NULL,
+                    last_interest_update REAL NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
+            # Lenders table
+            self.cursor.execute('''
+                CREATE TABLE IF NOT EXISTS lenders (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    pool_id TEXT NOT NULL,
+                    lender_address TEXT NOT NULL,
+                    principal REAL NOT NULL DEFAULT 0,
+                    interest_earned REAL NOT NULL DEFAULT 0,
+                    last_deposit_time REAL NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (pool_id) REFERENCES lending_pools(pool_id),
+                    UNIQUE(pool_id, lender_address)
+                )
+            ''')
+            
+            # Borrowers table
+            self.cursor.execute('''
+                CREATE TABLE IF NOT EXISTS borrowers (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    pool_id TEXT NOT NULL,
+                    borrower_address TEXT NOT NULL,
+                    principal REAL NOT NULL DEFAULT 0,
+                    interest_owed REAL NOT NULL DEFAULT 0,
+                    collateral_token TEXT NOT NULL,
+                    collateral_amount REAL NOT NULL DEFAULT 0,
+                    last_borrow_time REAL NOT NULL,
+                    liquidation_price REAL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (pool_id) REFERENCES lending_pools(pool_id),
+                    UNIQUE(pool_id, borrower_address)
+                )
+            ''')
+            
+            # Lending pool history table
+            self.cursor.execute('''
+                CREATE TABLE IF NOT EXISTS lending_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    pool_id TEXT NOT NULL,
+                    type TEXT NOT NULL,
+                    address TEXT NOT NULL,
+                    amount REAL NOT NULL,
+                    collateral_amount REAL,
+                    collateral_token TEXT,
+                    liquidator_address TEXT,
+                    timestamp REAL NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (pool_id) REFERENCES lending_pools(pool_id)
+                )
+            ''')
+            
+            # Treasury table
+            self.cursor.execute('''
+                CREATE TABLE IF NOT EXISTS treasury (
+                    treasury_address TEXT PRIMARY KEY,
+                    dao_id TEXT NOT NULL,
+                    balance REAL NOT NULL DEFAULT 0,
+                    proposal_fee REAL NOT NULL,
+                    minimum_proposal_amount REAL NOT NULL,
+                    transaction_counter INTEGER NOT NULL DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (dao_id) REFERENCES daos(dao_id)
+                )
+            ''')
+            
+            # Treasury transactions table
+            self.cursor.execute('''
+                CREATE TABLE IF NOT EXISTS treasury_transactions (
+                    transaction_id TEXT PRIMARY KEY,
+                    treasury_address TEXT NOT NULL,
+                    type TEXT NOT NULL,
+                    from_address TEXT,
+                    to_address TEXT,
+                    amount REAL NOT NULL,
+                    fee REAL NOT NULL DEFAULT 0,
+                    proposal_id TEXT,
+                    timestamp REAL NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (treasury_address) REFERENCES treasury(treasury_address)
+                )
+            ''')
+            
+            # Funding proposals table
+            self.cursor.execute('''
+                CREATE TABLE IF NOT EXISTS funding_proposals (
+                    proposal_id TEXT PRIMARY KEY,
+                    treasury_address TEXT NOT NULL,
+                    proposer_address TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    description TEXT,
+                    amount REAL NOT NULL,
+                    fee REAL NOT NULL,
+                    recipient_address TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    submission_time REAL NOT NULL,
+                    votes TEXT,
+                    vote_count INTEGER NOT NULL DEFAULT 0,
+                    vote_threshold REAL NOT NULL,
+                    voting_period REAL NOT NULL,
+                    finalized INTEGER NOT NULL DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (treasury_address) REFERENCES treasury(treasury_address)
+                )
+            ''')
+            
+            # Indexes for performance optimization
+            self.cursor.execute('CREATE INDEX IF NOT EXISTS idx_staking_validator ON staking(validator_address)')
+            self.cursor.execute('CREATE INDEX IF NOT EXISTS idx_staking_staker ON staking(staker_address)')
+            self.cursor.execute('CREATE INDEX IF NOT EXISTS idx_rewards_recipient ON rewards(recipient_address)')
+            self.cursor.execute('CREATE INDEX IF NOT EXISTS idx_rewards_validator ON rewards(validator_address)')
+            self.cursor.execute('CREATE INDEX IF NOT EXISTS idx_proposals_dao ON proposals(dao_id)')
+            self.cursor.execute('CREATE INDEX IF NOT EXISTS idx_proposals_status ON proposals(status)')
+            self.cursor.execute('CREATE INDEX IF NOT EXISTS idx_votes_proposal ON votes(proposal_id)')
+            self.cursor.execute('CREATE INDEX IF NOT EXISTS idx_votes_voter ON votes(voter_address)')
+            self.cursor.execute('CREATE INDEX IF NOT EXISTS idx_lenders_pool ON lenders(pool_id)')
+            self.cursor.execute('CREATE INDEX IF NOT EXISTS idx_borrowers_pool ON borrowers(pool_id)')
+            self.cursor.execute('CREATE INDEX IF NOT EXISTS idx_lending_history_pool ON lending_history(pool_id)')
+            self.cursor.execute('CREATE INDEX IF NOT EXISTS idx_treasury_transactions_treasury ON treasury_transactions(treasury_address)')
+            self.cursor.execute('CREATE INDEX IF NOT EXISTS idx_funding_proposals_treasury ON funding_proposals(treasury_address)')
+            self.cursor.execute('CREATE INDEX IF NOT EXISTS idx_funding_proposals_status ON funding_proposals(status)')
+            
             self.connection.commit()
             self.logger.debug("Database tables created/verified")
         
@@ -949,6 +1194,1320 @@ class Database:
             self.logger.error(f"Failed to remove from mempool: {e}")
             self.connection.rollback()
             raise
+    
+    # Staking operations
+    def save_staking(self, staking_data: Dict):
+        """
+        Save staking data.
+        
+        Args:
+            staking_data: Staking data dictionary
+        """
+        try:
+            with self.lock:
+                self.cursor.execute('''
+                    INSERT OR REPLACE INTO staking (
+                        validator_address, staker_address, amount, timestamp, type, block_height
+                    ) VALUES (?, ?, ?, ?, ?, ?)
+                ''', (
+                    staking_data['validator_address'],
+                    staking_data['staker_address'],
+                    staking_data['amount'],
+                    staking_data['timestamp'],
+                    staking_data['type'],
+                    staking_data.get('block_height')
+                ))
+                
+                self.connection.commit()
+                
+        except Exception as e:
+            self.logger.error(f"Failed to save staking data: {e}")
+            self.connection.rollback()
+            raise
+    
+    def get_staking_by_validator(self, validator_address: str) -> List[Dict]:
+        """
+        Get staking data by validator address.
+        
+        Args:
+            validator_address: Validator address
+            
+        Returns:
+            List of staking data
+        """
+        try:
+            with self.lock:
+                self.cursor.execute('''
+                    SELECT * FROM staking WHERE validator_address = ? ORDER BY timestamp DESC
+                ''', (validator_address,))
+                
+                staking = []
+                for row in self.cursor.fetchall():
+                    staking.append({
+                        'validator_address': row['validator_address'],
+                        'staker_address': row['staker_address'],
+                        'amount': row['amount'],
+                        'timestamp': row['timestamp'],
+                        'type': row['type'],
+                        'block_height': row['block_height']
+                    })
+                
+                return staking
+                
+        except Exception as e:
+            self.logger.error(f"Failed to get staking data by validator: {e}")
+            return []
+    
+    def get_staking_by_staker(self, staker_address: str) -> List[Dict]:
+        """
+        Get staking data by staker address.
+        
+        Args:
+            staker_address: Staker address
+            
+        Returns:
+            List of staking data
+        """
+        try:
+            with self.lock:
+                self.cursor.execute('''
+                    SELECT * FROM staking WHERE staker_address = ? ORDER BY timestamp DESC
+                ''', (staker_address,))
+                
+                staking = []
+                for row in self.cursor.fetchall():
+                    staking.append({
+                        'validator_address': row['validator_address'],
+                        'staker_address': row['staker_address'],
+                        'amount': row['amount'],
+                        'timestamp': row['timestamp'],
+                        'type': row['type'],
+                        'block_height': row['block_height']
+                    })
+                
+                return staking
+                
+        except Exception as e:
+            self.logger.error(f"Failed to get staking data by staker: {e}")
+            return []
+    
+    # Rewards operations
+    def save_reward(self, reward_data: Dict):
+        """
+        Save reward data.
+        
+        Args:
+            reward_data: Reward data dictionary
+        """
+        try:
+            with self.lock:
+                self.cursor.execute('''
+                    INSERT OR REPLACE INTO rewards (
+                        validator_address, recipient_address, amount, type, block_height, timestamp
+                    ) VALUES (?, ?, ?, ?, ?, ?)
+                ''', (
+                    reward_data['validator_address'],
+                    reward_data['recipient_address'],
+                    reward_data['amount'],
+                    reward_data['type'],
+                    reward_data.get('block_height'),
+                    reward_data['timestamp']
+                ))
+                
+                self.connection.commit()
+                
+        except Exception as e:
+            self.logger.error(f"Failed to save reward data: {e}")
+            self.connection.rollback()
+            raise
+    
+    def get_rewards_by_recipient(self, recipient_address: str) -> List[Dict]:
+        """
+        Get rewards by recipient address.
+        
+        Args:
+            recipient_address: Recipient address
+            
+        Returns:
+            List of rewards
+        """
+        try:
+            with self.lock:
+                self.cursor.execute('''
+                    SELECT * FROM rewards WHERE recipient_address = ? ORDER BY timestamp DESC
+                ''', (recipient_address,))
+                
+                rewards = []
+                for row in self.cursor.fetchall():
+                    rewards.append({
+                        'validator_address': row['validator_address'],
+                        'recipient_address': row['recipient_address'],
+                        'amount': row['amount'],
+                        'type': row['type'],
+                        'block_height': row['block_height'],
+                        'timestamp': row['timestamp']
+                    })
+                
+                return rewards
+                
+        except Exception as e:
+            self.logger.error(f"Failed to get rewards by recipient: {e}")
+            return []
+    
+    def get_rewards_by_validator(self, validator_address: str) -> List[Dict]:
+        """
+        Get rewards by validator address.
+        
+        Args:
+            validator_address: Validator address
+            
+        Returns:
+            List of rewards
+        """
+        try:
+            with self.lock:
+                self.cursor.execute('''
+                    SELECT * FROM rewards WHERE validator_address = ? ORDER BY timestamp DESC
+                ''', (validator_address,))
+                
+                rewards = []
+                for row in self.cursor.fetchall():
+                    rewards.append({
+                        'validator_address': row['validator_address'],
+                        'recipient_address': row['recipient_address'],
+                        'amount': row['amount'],
+                        'type': row['type'],
+                        'block_height': row['block_height'],
+                        'timestamp': row['timestamp']
+                    })
+                
+                return rewards
+                
+        except Exception as e:
+            self.logger.error(f"Failed to get rewards by validator: {e}")
+            return []
+    
+    # Unstaking queue operations
+    def save_unstaking_queue(self, unstaking_data: Dict):
+        """
+        Save unstaking queue data.
+        
+        Args:
+            unstaking_data: Unstaking queue data dictionary
+        """
+        try:
+            with self.lock:
+                self.cursor.execute('''
+                    INSERT OR REPLACE INTO unstaking_queue (
+                        validator_address, staker_address, amount, request_time, release_time, completed
+                    ) VALUES (?, ?, ?, ?, ?, ?)
+                ''', (
+                    unstaking_data['validator_address'],
+                    unstaking_data['staker_address'],
+                    unstaking_data['amount'],
+                    unstaking_data['request_time'],
+                    unstaking_data['release_time'],
+                    1 if unstaking_data.get('completed', False) else 0
+                ))
+                
+                self.connection.commit()
+                
+        except Exception as e:
+            self.logger.error(f"Failed to save unstaking queue data: {e}")
+            self.connection.rollback()
+            raise
+    
+    def get_unstaking_queue(self, completed: bool = False) -> List[Dict]:
+        """
+        Get unstaking queue data.
+        
+        Args:
+            completed: Whether to get completed unstaking requests
+            
+        Returns:
+            List of unstaking queue data
+        """
+        try:
+            with self.lock:
+                self.cursor.execute('''
+                    SELECT * FROM unstaking_queue WHERE completed = ? ORDER BY request_time DESC
+                ''', (1 if completed else 0,))
+                
+                unstaking_queue = []
+                for row in self.cursor.fetchall():
+                    unstaking_queue.append({
+                        'validator_address': row['validator_address'],
+                        'staker_address': row['staker_address'],
+                        'amount': row['amount'],
+                        'request_time': row['request_time'],
+                        'release_time': row['release_time'],
+                        'completed': bool(row['completed'])
+                    })
+                
+                return unstaking_queue
+                
+        except Exception as e:
+            self.logger.error(f"Failed to get unstaking queue: {e}")
+            return []
+    
+    # DAO operations
+    def save_dao(self, dao_data: Dict):
+        """
+        Save DAO data.
+        
+        Args:
+            dao_data: DAO data dictionary
+        """
+        try:
+            with self.lock:
+                self.cursor.execute('''
+                    INSERT OR REPLACE INTO daos (
+                        dao_id, name, description, creator_address, total_token_supply,
+                        quorum_threshold, approval_threshold, voting_period, proposal_fee,
+                        governance_token, treasury, members, config, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    dao_data['dao_id'],
+                    dao_data['name'],
+                    dao_data.get('description'),
+                    dao_data['creator_address'],
+                    dao_data['total_token_supply'],
+                    dao_data['quorum_threshold'],
+                    dao_data['approval_threshold'],
+                    dao_data['voting_period'],
+                    dao_data['proposal_fee'],
+                    dao_data['governance_token'],
+                    json.dumps(dao_data.get('treasury', {})),
+                    json.dumps(dao_data.get('members', {})),
+                    json.dumps(dao_data.get('config', {})),
+                    dao_data['created_at'],
+                    dao_data['updated_at']
+                ))
+                
+                self.connection.commit()
+                
+        except Exception as e:
+            self.logger.error(f"Failed to save DAO data: {e}")
+            self.connection.rollback()
+            raise
+    
+    def get_dao(self, dao_id: str) -> Optional[Dict]:
+        """
+        Get DAO data by ID.
+        
+        Args:
+            dao_id: DAO ID
+            
+        Returns:
+            DAO data or None
+        """
+        try:
+            with self.lock:
+                self.cursor.execute('''
+                    SELECT * FROM daos WHERE dao_id = ?
+                ''', (dao_id,))
+                
+                row = self.cursor.fetchone()
+                if row:
+                    return {
+                        'dao_id': row['dao_id'],
+                        'name': row['name'],
+                        'description': row['description'],
+                        'creator_address': row['creator_address'],
+                        'total_token_supply': row['total_token_supply'],
+                        'quorum_threshold': row['quorum_threshold'],
+                        'approval_threshold': row['approval_threshold'],
+                        'voting_period': row['voting_period'],
+                        'proposal_fee': row['proposal_fee'],
+                        'governance_token': row['governance_token'],
+                        'treasury': json.loads(row['treasury']),
+                        'members': json.loads(row['members']),
+                        'config': json.loads(row['config']),
+                        'created_at': row['created_at'],
+                        'updated_at': row['updated_at']
+                    }
+                
+                return None
+                
+        except Exception as e:
+            self.logger.error(f"Failed to get DAO: {e}")
+            return None
+    
+    def get_all_daos(self) -> List[Dict]:
+        """
+        Get all DAOs.
+        
+        Returns:
+            List of DAOs
+        """
+        try:
+            with self.lock:
+                self.cursor.execute('''
+                    SELECT * FROM daos
+                ''')
+                
+                daos = []
+                for row in self.cursor.fetchall():
+                    daos.append({
+                        'dao_id': row['dao_id'],
+                        'name': row['name'],
+                        'description': row['description'],
+                        'creator_address': row['creator_address'],
+                        'total_token_supply': row['total_token_supply'],
+                        'quorum_threshold': row['quorum_threshold'],
+                        'approval_threshold': row['approval_threshold'],
+                        'voting_period': row['voting_period'],
+                        'proposal_fee': row['proposal_fee'],
+                        'governance_token': row['governance_token'],
+                        'treasury': json.loads(row['treasury']),
+                        'members': json.loads(row['members']),
+                        'config': json.loads(row['config']),
+                        'created_at': row['created_at'],
+                        'updated_at': row['updated_at']
+                    })
+                
+                return daos
+                
+        except Exception as e:
+            self.logger.error(f"Failed to get all DAOs: {e}")
+            return []
+    
+    # Proposals operations
+    def save_proposal(self, proposal_data: Dict):
+        """
+        Save proposal data.
+        
+        Args:
+            proposal_data: Proposal data dictionary
+        """
+        try:
+            with self.lock:
+                self.cursor.execute('''
+                    INSERT OR REPLACE INTO proposals (
+                        proposal_id, dao_id, proposer_address, title, description, type,
+                        status, quorum_required, approval_threshold, voting_duration,
+                        start_time, end_time, yes_votes, no_votes, abstain_votes,
+                        total_votes, executed, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    proposal_data['proposal_id'],
+                    proposal_data['dao_id'],
+                    proposal_data['proposer_address'],
+                    proposal_data['title'],
+                    proposal_data.get('description'),
+                    proposal_data['type'],
+                    proposal_data['status'],
+                    proposal_data['quorum_required'],
+                    proposal_data['approval_threshold'],
+                    proposal_data['voting_duration'],
+                    proposal_data.get('start_time'),
+                    proposal_data.get('end_time'),
+                    proposal_data.get('yes_votes', 0),
+                    proposal_data.get('no_votes', 0),
+                    proposal_data.get('abstain_votes', 0),
+                    proposal_data.get('total_votes', 0),
+                    1 if proposal_data.get('executed', False) else 0,
+                    proposal_data['created_at'],
+                    proposal_data['updated_at']
+                ))
+                
+                self.connection.commit()
+                
+        except Exception as e:
+            self.logger.error(f"Failed to save proposal data: {e}")
+            self.connection.rollback()
+            raise
+    
+    def get_proposal(self, proposal_id: str) -> Optional[Dict]:
+        """
+        Get proposal by ID.
+        
+        Args:
+            proposal_id: Proposal ID
+            
+        Returns:
+            Proposal data or None
+        """
+        try:
+            with self.lock:
+                self.cursor.execute('''
+                    SELECT * FROM proposals WHERE proposal_id = ?
+                ''', (proposal_id,))
+                
+                row = self.cursor.fetchone()
+                if row:
+                    return {
+                        'proposal_id': row['proposal_id'],
+                        'dao_id': row['dao_id'],
+                        'proposer_address': row['proposer_address'],
+                        'title': row['title'],
+                        'description': row['description'],
+                        'type': row['type'],
+                        'status': row['status'],
+                        'quorum_required': row['quorum_required'],
+                        'approval_threshold': row['approval_threshold'],
+                        'voting_duration': row['voting_duration'],
+                        'start_time': row['start_time'],
+                        'end_time': row['end_time'],
+                        'yes_votes': row['yes_votes'],
+                        'no_votes': row['no_votes'],
+                        'abstain_votes': row['abstain_votes'],
+                        'total_votes': row['total_votes'],
+                        'executed': bool(row['executed']),
+                        'created_at': row['created_at'],
+                        'updated_at': row['updated_at']
+                    }
+                
+                return None
+                
+        except Exception as e:
+            self.logger.error(f"Failed to get proposal: {e}")
+            return None
+    
+    def get_proposals_by_dao(self, dao_id: str) -> List[Dict]:
+        """
+        Get proposals by DAO ID.
+        
+        Args:
+            dao_id: DAO ID
+            
+        Returns:
+            List of proposals
+        """
+        try:
+            with self.lock:
+                self.cursor.execute('''
+                    SELECT * FROM proposals WHERE dao_id = ? ORDER BY created_at DESC
+                ''', (dao_id,))
+                
+                proposals = []
+                for row in self.cursor.fetchall():
+                    proposals.append({
+                        'proposal_id': row['proposal_id'],
+                        'dao_id': row['dao_id'],
+                        'proposer_address': row['proposer_address'],
+                        'title': row['title'],
+                        'description': row['description'],
+                        'type': row['type'],
+                        'status': row['status'],
+                        'quorum_required': row['quorum_required'],
+                        'approval_threshold': row['approval_threshold'],
+                        'voting_duration': row['voting_duration'],
+                        'start_time': row['start_time'],
+                        'end_time': row['end_time'],
+                        'yes_votes': row['yes_votes'],
+                        'no_votes': row['no_votes'],
+                        'abstain_votes': row['abstain_votes'],
+                        'total_votes': row['total_votes'],
+                        'executed': bool(row['executed']),
+                        'created_at': row['created_at'],
+                        'updated_at': row['updated_at']
+                    })
+                
+                return proposals
+                
+        except Exception as e:
+            self.logger.error(f"Failed to get proposals by DAO: {e}")
+            return []
+    
+    def get_proposals_by_status(self, status: str) -> List[Dict]:
+        """
+        Get proposals by status.
+        
+        Args:
+            status: Proposal status
+            
+        Returns:
+            List of proposals
+        """
+        try:
+            with self.lock:
+                self.cursor.execute('''
+                    SELECT * FROM proposals WHERE status = ? ORDER BY created_at DESC
+                ''', (status,))
+                
+                proposals = []
+                for row in self.cursor.fetchall():
+                    proposals.append({
+                        'proposal_id': row['proposal_id'],
+                        'dao_id': row['dao_id'],
+                        'proposer_address': row['proposer_address'],
+                        'title': row['title'],
+                        'description': row['description'],
+                        'type': row['type'],
+                        'status': row['status'],
+                        'quorum_required': row['quorum_required'],
+                        'approval_threshold': row['approval_threshold'],
+                        'voting_duration': row['voting_duration'],
+                        'start_time': row['start_time'],
+                        'end_time': row['end_time'],
+                        'yes_votes': row['yes_votes'],
+                        'no_votes': row['no_votes'],
+                        'abstain_votes': row['abstain_votes'],
+                        'total_votes': row['total_votes'],
+                        'executed': bool(row['executed']),
+                        'created_at': row['created_at'],
+                        'updated_at': row['updated_at']
+                    })
+                
+                return proposals
+                
+        except Exception as e:
+            self.logger.error(f"Failed to get proposals by status: {e}")
+            return []
+    
+    # Votes operations
+    def save_vote(self, vote_data: Dict):
+        """
+        Save vote data.
+        
+        Args:
+            vote_data: Vote data dictionary
+        """
+        try:
+            with self.lock:
+                self.cursor.execute('''
+                    INSERT OR REPLACE INTO votes (
+                        proposal_id, voter_address, vote, voting_power, timestamp
+                    ) VALUES (?, ?, ?, ?, ?)
+                ''', (
+                    vote_data['proposal_id'],
+                    vote_data['voter_address'],
+                    vote_data['vote'],
+                    vote_data['voting_power'],
+                    vote_data['timestamp']
+                ))
+                
+                self.connection.commit()
+                
+        except Exception as e:
+            self.logger.error(f"Failed to save vote data: {e}")
+            self.connection.rollback()
+            raise
+    
+    def get_votes_by_proposal(self, proposal_id: str) -> List[Dict]:
+        """
+        Get votes by proposal ID.
+        
+        Args:
+            proposal_id: Proposal ID
+            
+        Returns:
+            List of votes
+        """
+        try:
+            with self.lock:
+                self.cursor.execute('''
+                    SELECT * FROM votes WHERE proposal_id = ? ORDER BY timestamp DESC
+                ''', (proposal_id,))
+                
+                votes = []
+                for row in self.cursor.fetchall():
+                    votes.append({
+                        'proposal_id': row['proposal_id'],
+                        'voter_address': row['voter_address'],
+                        'vote': row['vote'],
+                        'voting_power': row['voting_power'],
+                        'timestamp': row['timestamp']
+                    })
+                
+                return votes
+                
+        except Exception as e:
+            self.logger.error(f"Failed to get votes by proposal: {e}")
+            return []
+    
+    def get_votes_by_voter(self, voter_address: str) -> List[Dict]:
+        """
+        Get votes by voter address.
+        
+        Args:
+            voter_address: Voter address
+            
+        Returns:
+            List of votes
+        """
+        try:
+            with self.lock:
+                self.cursor.execute('''
+                    SELECT * FROM votes WHERE voter_address = ? ORDER BY timestamp DESC
+                ''', (voter_address,))
+                
+                votes = []
+                for row in self.cursor.fetchall():
+                    votes.append({
+                        'proposal_id': row['proposal_id'],
+                        'voter_address': row['voter_address'],
+                        'vote': row['vote'],
+                        'voting_power': row['voting_power'],
+                        'timestamp': row['timestamp']
+                    })
+                
+                return votes
+                
+        except Exception as e:
+            self.logger.error(f"Failed to get votes by voter: {e}")
+            return []
+    
+    # Lending operations
+    def save_lending_pool(self, pool_data: Dict):
+        """
+        Save lending pool data.
+        
+        Args:
+            pool_data: Lending pool data dictionary
+        """
+        try:
+            with self.lock:
+                self.cursor.execute('''
+                    INSERT OR REPLACE INTO lending_pools (
+                        pool_id, token, total_deposits, total_borrowed, interest_rate,
+                        collateral_ratio, liquidation_threshold, liquidation_bonus,
+                        last_interest_update, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                ''', (
+                    pool_data['pool_id'],
+                    pool_data['token'],
+                    pool_data.get('total_deposits', 0),
+                    pool_data.get('total_borrowed', 0),
+                    pool_data['interest_rate'],
+                    pool_data['collateral_ratio'],
+                    pool_data['liquidation_threshold'],
+                    pool_data['liquidation_bonus'],
+                    pool_data['last_interest_update']
+                ))
+                
+                self.connection.commit()
+                
+        except Exception as e:
+            self.logger.error(f"Failed to save lending pool data: {e}")
+            self.connection.rollback()
+            raise
+    
+    def get_lending_pool(self, pool_id: str) -> Optional[Dict]:
+        """
+        Get lending pool by ID.
+        
+        Args:
+            pool_id: Lending pool ID
+            
+        Returns:
+            Lending pool data or None
+        """
+        try:
+            with self.lock:
+                self.cursor.execute('''
+                    SELECT * FROM lending_pools WHERE pool_id = ?
+                ''', (pool_id,))
+                
+                row = self.cursor.fetchone()
+                if row:
+                    return {
+                        'pool_id': row['pool_id'],
+                        'token': row['token'],
+                        'total_deposits': row['total_deposits'],
+                        'total_borrowed': row['total_borrowed'],
+                        'interest_rate': row['interest_rate'],
+                        'collateral_ratio': row['collateral_ratio'],
+                        'liquidation_threshold': row['liquidation_threshold'],
+                        'liquidation_bonus': row['liquidation_bonus'],
+                        'last_interest_update': row['last_interest_update'],
+                        'created_at': row['created_at'],
+                        'updated_at': row['updated_at']
+                    }
+                
+                return None
+                
+        except Exception as e:
+            self.logger.error(f"Failed to get lending pool: {e}")
+            return None
+    
+    def get_all_lending_pools(self) -> List[Dict]:
+        """
+        Get all lending pools.
+        
+        Returns:
+            List of lending pools
+        """
+        try:
+            with self.lock:
+                self.cursor.execute('''
+                    SELECT * FROM lending_pools
+                ''')
+                
+                pools = []
+                for row in self.cursor.fetchall():
+                    pools.append({
+                        'pool_id': row['pool_id'],
+                        'token': row['token'],
+                        'total_deposits': row['total_deposits'],
+                        'total_borrowed': row['total_borrowed'],
+                        'interest_rate': row['interest_rate'],
+                        'collateral_ratio': row['collateral_ratio'],
+                        'liquidation_threshold': row['liquidation_threshold'],
+                        'liquidation_bonus': row['liquidation_bonus'],
+                        'last_interest_update': row['last_interest_update'],
+                        'created_at': row['created_at'],
+                        'updated_at': row['updated_at']
+                    })
+                
+                return pools
+                
+        except Exception as e:
+            self.logger.error(f"Failed to get all lending pools: {e}")
+            return []
+    
+    def save_lender(self, lender_data: Dict):
+        """
+        Save lender data.
+        
+        Args:
+            lender_data: Lender data dictionary
+        """
+        try:
+            with self.lock:
+                self.cursor.execute('''
+                    INSERT OR REPLACE INTO lenders (
+                        pool_id, lender_address, principal, interest_earned, last_deposit_time, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                ''', (
+                    lender_data['pool_id'],
+                    lender_data['lender_address'],
+                    lender_data.get('principal', 0),
+                    lender_data.get('interest_earned', 0),
+                    lender_data['last_deposit_time']
+                ))
+                
+                self.connection.commit()
+                
+        except Exception as e:
+            self.logger.error(f"Failed to save lender data: {e}")
+            self.connection.rollback()
+            raise
+    
+    def get_lender(self, pool_id: str, lender_address: str) -> Optional[Dict]:
+        """
+        Get lender by pool and address.
+        
+        Args:
+            pool_id: Lending pool ID
+            lender_address: Lender address
+            
+        Returns:
+            Lender data or None
+        """
+        try:
+            with self.lock:
+                self.cursor.execute('''
+                    SELECT * FROM lenders WHERE pool_id = ? AND lender_address = ?
+                ''', (pool_id, lender_address))
+                
+                row = self.cursor.fetchone()
+                if row:
+                    return {
+                        'pool_id': row['pool_id'],
+                        'lender_address': row['lender_address'],
+                        'principal': row['principal'],
+                        'interest_earned': row['interest_earned'],
+                        'last_deposit_time': row['last_deposit_time'],
+                        'created_at': row['created_at'],
+                        'updated_at': row['updated_at']
+                    }
+                
+                return None
+                
+        except Exception as e:
+            self.logger.error(f"Failed to get lender: {e}")
+            return None
+    
+    def get_lenders_by_pool(self, pool_id: str) -> List[Dict]:
+        """
+        Get lenders by pool ID.
+        
+        Args:
+            pool_id: Lending pool ID
+            
+        Returns:
+            List of lenders
+        """
+        try:
+            with self.lock:
+                self.cursor.execute('''
+                    SELECT * FROM lenders WHERE pool_id = ?
+                ''', (pool_id,))
+                
+                lenders = []
+                for row in self.cursor.fetchall():
+                    lenders.append({
+                        'pool_id': row['pool_id'],
+                        'lender_address': row['lender_address'],
+                        'principal': row['principal'],
+                        'interest_earned': row['interest_earned'],
+                        'last_deposit_time': row['last_deposit_time'],
+                        'created_at': row['created_at'],
+                        'updated_at': row['updated_at']
+                    })
+                
+                return lenders
+                
+        except Exception as e:
+            self.logger.error(f"Failed to get lenders by pool: {e}")
+            return []
+    
+    def save_borrower(self, borrower_data: Dict):
+        """
+        Save borrower data.
+        
+        Args:
+            borrower_data: Borrower data dictionary
+        """
+        try:
+            with self.lock:
+                self.cursor.execute('''
+                    INSERT OR REPLACE INTO borrowers (
+                        pool_id, borrower_address, principal, interest_owed,
+                        collateral_token, collateral_amount, last_borrow_time,
+                        liquidation_price, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                ''', (
+                    borrower_data['pool_id'],
+                    borrower_data['borrower_address'],
+                    borrower_data.get('principal', 0),
+                    borrower_data.get('interest_owed', 0),
+                    borrower_data['collateral_token'],
+                    borrower_data.get('collateral_amount', 0),
+                    borrower_data['last_borrow_time'],
+                    borrower_data.get('liquidation_price')
+                ))
+                
+                self.connection.commit()
+                
+        except Exception as e:
+            self.logger.error(f"Failed to save borrower data: {e}")
+            self.connection.rollback()
+            raise
+    
+    def get_borrower(self, pool_id: str, borrower_address: str) -> Optional[Dict]:
+        """
+        Get borrower by pool and address.
+        
+        Args:
+            pool_id: Lending pool ID
+            borrower_address: Borrower address
+            
+        Returns:
+            Borrower data or None
+        """
+        try:
+            with self.lock:
+                self.cursor.execute('''
+                    SELECT * FROM borrowers WHERE pool_id = ? AND borrower_address = ?
+                ''', (pool_id, borrower_address))
+                
+                row = self.cursor.fetchone()
+                if row:
+                    return {
+                        'pool_id': row['pool_id'],
+                        'borrower_address': row['borrower_address'],
+                        'principal': row['principal'],
+                        'interest_owed': row['interest_owed'],
+                        'collateral_token': row['collateral_token'],
+                        'collateral_amount': row['collateral_amount'],
+                        'last_borrow_time': row['last_borrow_time'],
+                        'liquidation_price': row['liquidation_price'],
+                        'created_at': row['created_at'],
+                        'updated_at': row['updated_at']
+                    }
+                
+                return None
+                
+        except Exception as e:
+            self.logger.error(f"Failed to get borrower: {e}")
+            return None
+    
+    def get_borrowers_by_pool(self, pool_id: str) -> List[Dict]:
+        """
+        Get borrowers by pool ID.
+        
+        Args:
+            pool_id: Lending pool ID
+            
+        Returns:
+            List of borrowers
+        """
+        try:
+            with self.lock:
+                self.cursor.execute('''
+                    SELECT * FROM borrowers WHERE pool_id = ?
+                ''', (pool_id,))
+                
+                borrowers = []
+                for row in self.cursor.fetchall():
+                    borrowers.append({
+                        'pool_id': row['pool_id'],
+                        'borrower_address': row['borrower_address'],
+                        'principal': row['principal'],
+                        'interest_owed': row['interest_owed'],
+                        'collateral_token': row['collateral_token'],
+                        'collateral_amount': row['collateral_amount'],
+                        'last_borrow_time': row['last_borrow_time'],
+                        'liquidation_price': row['liquidation_price'],
+                        'created_at': row['created_at'],
+                        'updated_at': row['updated_at']
+                    })
+                
+                return borrowers
+                
+        except Exception as e:
+            self.logger.error(f"Failed to get borrowers by pool: {e}")
+            return []
+    
+    def save_lending_history(self, history_data: Dict):
+        """
+        Save lending history data.
+        
+        Args:
+            history_data: Lending history data dictionary
+        """
+        try:
+            with self.lock:
+                self.cursor.execute('''
+                    INSERT OR REPLACE INTO lending_history (
+                        pool_id, type, address, amount, collateral_amount,
+                        collateral_token, liquidator_address, timestamp
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    history_data['pool_id'],
+                    history_data['type'],
+                    history_data['address'],
+                    history_data['amount'],
+                    history_data.get('collateral_amount'),
+                    history_data.get('collateral_token'),
+                    history_data.get('liquidator_address'),
+                    history_data['timestamp']
+                ))
+                
+                self.connection.commit()
+                
+        except Exception as e:
+            self.logger.error(f"Failed to save lending history: {e}")
+            self.connection.rollback()
+            raise
+    
+    def get_lending_history_by_pool(self, pool_id: str) -> List[Dict]:
+        """
+        Get lending history by pool ID.
+        
+        Args:
+            pool_id: Lending pool ID
+            
+        Returns:
+            List of lending history
+        """
+        try:
+            with self.lock:
+                self.cursor.execute('''
+                    SELECT * FROM lending_history WHERE pool_id = ? ORDER BY timestamp DESC
+                ''', (pool_id,))
+                
+                history = []
+                for row in self.cursor.fetchall():
+                    history.append({
+                        'pool_id': row['pool_id'],
+                        'type': row['type'],
+                        'address': row['address'],
+                        'amount': row['amount'],
+                        'collateral_amount': row['collateral_amount'],
+                        'collateral_token': row['collateral_token'],
+                        'liquidator_address': row['liquidator_address'],
+                        'timestamp': row['timestamp']
+                    })
+                
+                return history
+                
+        except Exception as e:
+            self.logger.error(f"Failed to get lending history by pool: {e}")
+            return []
+    
+    # Treasury operations
+    def save_treasury(self, treasury_data: Dict):
+        """
+        Save treasury data.
+        
+        Args:
+            treasury_data: Treasury data dictionary
+        """
+        try:
+            with self.lock:
+                self.cursor.execute('''
+                    INSERT OR REPLACE INTO treasury (
+                        treasury_address, dao_id, balance, proposal_fee,
+                        minimum_proposal_amount, transaction_counter, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                ''', (
+                    treasury_data['treasury_address'],
+                    treasury_data['dao_id'],
+                    treasury_data.get('balance', 0),
+                    treasury_data['proposal_fee'],
+                    treasury_data['minimum_proposal_amount'],
+                    treasury_data.get('transaction_counter', 0)
+                ))
+                
+                self.connection.commit()
+                
+        except Exception as e:
+            self.logger.error(f"Failed to save treasury data: {e}")
+            self.connection.rollback()
+            raise
+    
+    def get_treasury(self, treasury_address: str) -> Optional[Dict]:
+        """
+        Get treasury by address.
+        
+        Args:
+            treasury_address: Treasury address
+            
+        Returns:
+            Treasury data or None
+        """
+        try:
+            with self.lock:
+                self.cursor.execute('''
+                    SELECT * FROM treasury WHERE treasury_address = ?
+                ''', (treasury_address,))
+                
+                row = self.cursor.fetchone()
+                if row:
+                    return {
+                        'treasury_address': row['treasury_address'],
+                        'dao_id': row['dao_id'],
+                        'balance': row['balance'],
+                        'proposal_fee': row['proposal_fee'],
+                        'minimum_proposal_amount': row['minimum_proposal_amount'],
+                        'transaction_counter': row['transaction_counter'],
+                        'created_at': row['created_at'],
+                        'updated_at': row['updated_at']
+                    }
+                
+                return None
+                
+        except Exception as e:
+            self.logger.error(f"Failed to get treasury: {e}")
+            return None
+    
+    def save_treasury_transaction(self, transaction_data: Dict):
+        """
+        Save treasury transaction data.
+        
+        Args:
+            transaction_data: Treasury transaction data dictionary
+        """
+        try:
+            with self.lock:
+                self.cursor.execute('''
+                    INSERT OR REPLACE INTO treasury_transactions (
+                        transaction_id, treasury_address, type, from_address,
+                        to_address, amount, fee, proposal_id, timestamp
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    transaction_data['transaction_id'],
+                    transaction_data['treasury_address'],
+                    transaction_data['type'],
+                    transaction_data.get('from_address'),
+                    transaction_data.get('to_address'),
+                    transaction_data['amount'],
+                    transaction_data.get('fee', 0),
+                    transaction_data.get('proposal_id'),
+                    transaction_data['timestamp']
+                ))
+                
+                self.connection.commit()
+                
+        except Exception as e:
+            self.logger.error(f"Failed to save treasury transaction: {e}")
+            self.connection.rollback()
+            raise
+    
+    def get_treasury_transactions(self, treasury_address: str, transaction_type: str = None) -> List[Dict]:
+        """
+        Get treasury transactions.
+        
+        Args:
+            treasury_address: Treasury address
+            transaction_type: Optional transaction type filter
+            
+        Returns:
+            List of treasury transactions
+        """
+        try:
+            with self.lock:
+                if transaction_type:
+                    self.cursor.execute('''
+                        SELECT * FROM treasury_transactions 
+                        WHERE treasury_address = ? AND type = ? 
+                        ORDER BY timestamp DESC
+                    ''', (treasury_address, transaction_type))
+                else:
+                    self.cursor.execute('''
+                        SELECT * FROM treasury_transactions 
+                        WHERE treasury_address = ? 
+                        ORDER BY timestamp DESC
+                    ''', (treasury_address,))
+                
+                transactions = []
+                for row in self.cursor.fetchall():
+                    transactions.append({
+                        'transaction_id': row['transaction_id'],
+                        'treasury_address': row['treasury_address'],
+                        'type': row['type'],
+                        'from_address': row['from_address'],
+                        'to_address': row['to_address'],
+                        'amount': row['amount'],
+                        'fee': row['fee'],
+                        'proposal_id': row['proposal_id'],
+                        'timestamp': row['timestamp']
+                    })
+                
+                return transactions
+                
+        except Exception as e:
+            self.logger.error(f"Failed to get treasury transactions: {e}")
+            return []
+    
+    def save_funding_proposal(self, proposal_data: Dict):
+        """
+        Save funding proposal data.
+        
+        Args:
+            proposal_data: Funding proposal data dictionary
+        """
+        try:
+            with self.lock:
+                self.cursor.execute('''
+                    INSERT OR REPLACE INTO funding_proposals (
+                        proposal_id, treasury_address, proposer_address, title,
+                        description, amount, fee, recipient_address, status,
+                        submission_time, votes, vote_count, vote_threshold,
+                        voting_period, finalized
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    proposal_data['proposal_id'],
+                    proposal_data['treasury_address'],
+                    proposal_data['proposer_address'],
+                    proposal_data['title'],
+                    proposal_data.get('description'),
+                    proposal_data['amount'],
+                    proposal_data['fee'],
+                    proposal_data['recipient_address'],
+                    proposal_data['status'],
+                    proposal_data['submission_time'],
+                    json.dumps(proposal_data.get('votes', {})),
+                    proposal_data.get('vote_count', 0),
+                    proposal_data.get('vote_threshold', 0.66),
+                    proposal_data.get('voting_period', 86400),
+                    1 if proposal_data.get('finalized', False) else 0
+                ))
+                
+                self.connection.commit()
+                
+        except Exception as e:
+            self.logger.error(f"Failed to save funding proposal: {e}")
+            self.connection.rollback()
+            raise
+    
+    def get_funding_proposal(self, proposal_id: str) -> Optional[Dict]:
+        """
+        Get funding proposal by ID.
+        
+        Args:
+            proposal_id: Funding proposal ID
+            
+        Returns:
+            Funding proposal data or None
+        """
+        try:
+            with self.lock:
+                self.cursor.execute('''
+                    SELECT * FROM funding_proposals WHERE proposal_id = ?
+                ''', (proposal_id,))
+                
+                row = self.cursor.fetchone()
+                if row:
+                    return {
+                        'proposal_id': row['proposal_id'],
+                        'treasury_address': row['treasury_address'],
+                        'proposer_address': row['proposer_address'],
+                        'title': row['title'],
+                        'description': row['description'],
+                        'amount': row['amount'],
+                        'fee': row['fee'],
+                        'recipient_address': row['recipient_address'],
+                        'status': row['status'],
+                        'submission_time': row['submission_time'],
+                        'votes': json.loads(row['votes']),
+                        'vote_count': row['vote_count'],
+                        'vote_threshold': row['vote_threshold'],
+                        'voting_period': row['voting_period'],
+                        'finalized': bool(row['finalized'])
+                    }
+                
+                return None
+                
+        except Exception as e:
+            self.logger.error(f"Failed to get funding proposal: {e}")
+            return None
+    
+    def get_funding_proposals_by_treasury(self, treasury_address: str, status: str = None) -> List[Dict]:
+        """
+        Get funding proposals by treasury address.
+        
+        Args:
+            treasury_address: Treasury address
+            status: Optional status filter
+            
+        Returns:
+            List of funding proposals
+        """
+        try:
+            with self.lock:
+                if status:
+                    self.cursor.execute('''
+                        SELECT * FROM funding_proposals 
+                        WHERE treasury_address = ? AND status = ? 
+                        ORDER BY submission_time DESC
+                    ''', (treasury_address, status))
+                else:
+                    self.cursor.execute('''
+                        SELECT * FROM funding_proposals 
+                        WHERE treasury_address = ? 
+                        ORDER BY submission_time DESC
+                    ''', (treasury_address,))
+                
+                proposals = []
+                for row in self.cursor.fetchall():
+                    proposals.append({
+                        'proposal_id': row['proposal_id'],
+                        'treasury_address': row['treasury_address'],
+                        'proposer_address': row['proposer_address'],
+                        'title': row['title'],
+                        'description': row['description'],
+                        'amount': row['amount'],
+                        'fee': row['fee'],
+                        'recipient_address': row['recipient_address'],
+                        'status': row['status'],
+                        'submission_time': row['submission_time'],
+                        'votes': json.loads(row['votes']),
+                        'vote_count': row['vote_count'],
+                        'vote_threshold': row['vote_threshold'],
+                        'voting_period': row['voting_period'],
+                        'finalized': bool(row['finalized'])
+                    })
+                
+                return proposals
+                
+        except Exception as e:
+            self.logger.error(f"Failed to get funding proposals: {e}")
+            return []
     
     # Stats operations
     def set_stat(self, key: str, value: str):
